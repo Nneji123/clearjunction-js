@@ -3,6 +3,33 @@
   "version": "0.1.0",
   "description": "Standalone TypeScript SDK for the Clear Junction REST API. Not an official Clear Junction product.",
   "author": "Nneji Ifeanyi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nneji123/clearjunction-js.git"
+  },
+  "homepage": "https://github.com/Nneji123/clearjunction-js#readme",
+  "bugs": {
+    "url": "https://github.com/Nneji123/clearjunction-js/issues"
+  },
+  "keywords": [
+    "clearjunction",
+    "clear-junction",
+    "payments",
+    "sepa",
+    "sepa-instant",
+    "faster-payments",
+    "chaps",
+    "swift",
+    "iban",
+    "virtual-iban",
+    "payouts",
+    "fintech",
+    "webhooks",
+    "typescript",
+    "sdk"
+  ],
+  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -24,7 +51,6 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "license": "MIT",
   "engines": {
     "node": ">=20"
   },
