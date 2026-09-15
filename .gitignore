@@ -5,3 +5,4 @@ dist/
 
 # Vendored Clear Junction spec + build brief - reference only, not shipped
 docs/
+coverage/
