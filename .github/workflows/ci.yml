@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npx tsup
+
+      - name: Verify the published tarball
+        run: npm publish --dry-run
+
+      - name: Smoke test the built package (ESM + CJS)
+        run: |
+          node -e "
+            const cj = require('./dist/index.cjs');
+            const c = new cj.ClearJunction({ apiKey: 'k', apiPassword: 'p' });
+            const missing = ['payouts','virtualAccounts','transactions','wallets','fx','payin','refund','reports','checkRequisite','tokenize'].filter(r => !c[r]);
+            if (missing.length) throw new Error('CJS: missing resources ' + missing.join(','));
+            if (typeof cj.verifyWebhookSignature !== 'function') throw new Error('CJS: verifyWebhookSignature not exported');
+            console.log('CJS OK');
+          "
+          node --input-type=module -e "
+            import { ClearJunction, verifyWebhookSignature } from './dist/index.js';
+            const c = new ClearJunction({ apiKey: 'k', apiPassword: 'p' });
+            if (typeof c.payouts.sepaCreditTransfer !== 'function') throw new Error('ESM: payouts missing');
+            if (typeof verifyWebhookSignature !== 'function') throw new Error('ESM: verifyWebhookSignature missing');
+            console.log('ESM OK');
+          "

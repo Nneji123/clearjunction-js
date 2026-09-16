@@ -1,5 +1,13 @@
 # clearjunction-js
 
+[![CI](https://github.com/Nneji123/clearjunction-js/actions/workflows/ci.yml/badge.svg)](https://github.com/Nneji123/clearjunction-js/actions/workflows/ci.yml)
+[![Tests](https://github.com/Nneji123/clearjunction-js/actions/workflows/tests.yml/badge.svg)](https://github.com/Nneji123/clearjunction-js/actions/workflows/tests.yml)
+[![Codecov](https://github.com/Nneji123/clearjunction-js/actions/workflows/codecov.yml/badge.svg)](https://github.com/Nneji123/clearjunction-js/actions/workflows/codecov.yml)
+[![codecov](https://codecov.io/gh/Nneji123/clearjunction-js/branch/main/graph/badge.svg)](https://codecov.io/gh/Nneji123/clearjunction-js)
+[![npm version](https://img.shields.io/npm/v/clearjunction-js.svg)](https://www.npmjs.com/package/clearjunction-js)
+[![node](https://img.shields.io/node/v/clearjunction-js.svg)](https://www.npmjs.com/package/clearjunction-js)
+[![license](https://img.shields.io/npm/l/clearjunction-js.svg)](./LICENSE)
+
 Standalone TypeScript SDK for the [Clear Junction](https://api-docs.clearjunction.com/) REST API — virtual IBANs, crypto addresses, payouts (SEPA CT, SEPA Instant, FPS, CHAPS, SWIFT, internal), transaction actions, e-wallets, instant FX, payin, refunds, reports and requisite checks.
 
 > **Disclaimer:** this is not an official Clear Junction product. It is an independent client library and is not affiliated with, endorsed, or supported by Clear Junction.

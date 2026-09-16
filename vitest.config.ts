@@ -6,6 +6,8 @@ export default defineConfig({
     include: ['test/**/*.test.ts'],
     coverage: {
       provider: 'v8',
+      // 'text' for local runs, 'lcov' + 'json' for the Codecov upload in CI.
+      reporter: ['text', 'lcov', 'json'],
       thresholds: {
         statements: 70,
         branches: 70,
