@@ -30,9 +30,8 @@ describe('BaseClient', () => {
       const { headers, body } = init as { headers: Record<string, string>; body?: string };
       expect(headers['X-API-KEY']).toBe('my-key');
       expect(headers['Date']).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$/);
-      // The invariant that matters: the Authorization header must be the signature
-      // over the EXACT bytes being sent, recomputed here from the recorded body
-      // rather than from a second serialisation of the input object.
+      // Authorization is the signature over the exact bytes being sent,
+      // recomputed here from the body recorded off the injected fetch.
       expect(headers['Authorization']).toBe(
         buildSignature({
           apiKey: 'my-key',
@@ -56,7 +55,7 @@ describe('BaseClient', () => {
       path: '/v7/gate/payout/bankTransfer/eu',
       body: input,
     });
-    // Single serialisation: the sent string is JSON.stringify(input), key order preserved.
+    // The sent string is JSON.stringify(input), with key order preserved.
     expect(out.echoed).toBe(JSON.stringify(input));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -108,9 +107,8 @@ describe('BaseClient', () => {
     const out = await client.request<{ ok: boolean }>({ method: 'GET', path: '/x' });
     expect(out).toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    // Date is recomputed inside the retry loop (one header per attempt). Calls
-    // within the same second legitimately share a value, so assert per-attempt
-    // presence + shape rather than uniqueness.
+    // Date is recomputed inside the retry loop, one header per attempt.
+    // Attempts within the same second share a value, so assert shape and count.
     expect(dates).toHaveLength(3);
     for (const d of dates) {
       expect(d).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$/);
@@ -129,7 +127,7 @@ describe('BaseClient', () => {
     );
   });
 
-  it('does not retry a non-idempotent POST on 500 (a payout must not be sent twice)', async () => {
+  it('retries 5xx only for idempotent requests', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(500, ''));
     const client = new BaseClient({
       apiKey: 'k',
@@ -143,7 +141,7 @@ describe('BaseClient', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('retries a non-idempotent POST on 429, which is rejected before processing', async () => {
+  it('retries 429 for any method', async () => {
     const fetchMock = vi.fn(async () => {
       if (fetchMock.mock.calls.length < 2) return jsonResponse(429, '', { 'Retry-After': '0' });
       return jsonResponse(200, { ok: true });

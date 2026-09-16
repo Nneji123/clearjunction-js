@@ -6,7 +6,7 @@ export default defineConfig({
     include: ['test/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      // 'text' for local runs, 'lcov' + 'json' for the Codecov upload in CI.
+      // 'text' for local runs; 'lcov' and 'json' are consumed by Codecov in CI.
       reporter: ['text', 'lcov', 'json'],
       thresholds: {
         statements: 70,
@@ -14,9 +14,8 @@ export default defineConfig({
         functions: 70,
         lines: 70,
       },
-      // Measure source only: vitest's default excludes are replaced wholesale by
-      // this list, so test files must be named here or they self-cover at 100%
-      // and inflate the totals past the threshold.
+      // Measure src/ only. This list replaces vitest's defaults, so every
+      // non-source path is named explicitly.
       exclude: ['dist/**', 'docs/**', 'test/**', '**/*.config.ts', 'src/index.ts'],
     },
   },

@@ -71,12 +71,18 @@ await cj.checkRequisite.checkSepaIban(iban);
 
 ## Authentication
 
-Custom SHA-512 scheme (not HMAC, not bearer). Three headers go on every request — `Date`, `X-API-KEY`, `Authorization` — and the SDK computes them for you. Notes from the spec that bite:
+Custom SHA-512 scheme. Three headers go on every request — `Date`, `X-API-KEY`, `Authorization` — and the SDK computes all three for you:
 
-- `Date` is the only signature component **not** uppercased.
-- Requests are rejected on **>5 minutes of clock skew** before the signature is checked.
-- `401` = signature mismatch; body-validation errors are **`409`**, not `400`.
-- The sandbox **IP-allowlists at its load balancer**: an unlisted egress IP gets a plain `403` for everything. `ForbiddenError` says so explicitly.
+```
+signature = sha512(UPPER(apiKey) + date + UPPER(sha512(apiPassword)) + UPPER(body))
+```
+
+- `date` is passed through as given; every other component is uppercased.
+- The body is signed as the exact string that is sent, serialised once.
+- `Date` is refreshed on every attempt, keeping requests inside Clear Junction's 5-minute skew window.
+- `apiPassword` is hashed client-side and never transmitted.
+
+Responses map onto a typed error hierarchy: `401` to `AuthenticationError`, `409` to `ValidationError` carrying `errors[]`, and a non-JSON `403` to a `ForbiddenError` naming the sandbox IP allowlist.
 
 ## Webhooks
 
@@ -85,7 +91,7 @@ import { verifyWebhookSignature, acknowledgeNotification } from 'clearjunction-j
 
 // Express-style handler:
 app.post('/cj/hooks', (req, res) => {
-  const rawBody = req.body; // raw bytes as received — do not re-serialise
+  const rawBody = req.body; // raw bytes as received
   const ok = verifyWebhookSignature(rawBody, req.headers.authorization ?? '', {
     apiKey: process.env.CJ_API_KEY!,
     apiPassword: process.env.CJ_API_PASSWORD!,
@@ -98,7 +104,7 @@ app.post('/cj/hooks', (req, res) => {
 });
 ```
 
-Reply HTTP 200, `Content-Type: text/plain`, body = the bare `orderReference`, within 10 seconds — otherwise retries with backoff for 7 days / 50 attempts. Always verify; never fail open.
+Reply HTTP 200, `Content-Type: text/plain`, body = the bare `orderReference`, within 10 seconds. `acknowledgeNotification` builds that response, and `notificationDedupeKey` builds the dedupe key Clear Junction deduplicates on. Unacknowledged notifications are retried with backoff for 7 days or 50 attempts.
 
 ## Testing
 

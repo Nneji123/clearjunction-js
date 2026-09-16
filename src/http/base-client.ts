@@ -91,7 +91,7 @@ export class BaseClient {
     const maxRetries = this.config.maxRetries;
     const idempotent = opts.idempotent ?? method === 'GET';
 
-    // Serialise exactly once. Sign bodyString, send bodyString.
+    // Serialised once: bodyString is both signed and sent.
     const bodyString = opts.body === undefined ? '' : JSON.stringify(opts.body);
 
     let url = `${this.resolvedBaseUrl}${path}`;
@@ -108,7 +108,8 @@ export class BaseClient {
     let lastError: ClearJunctionError | undefined;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      // Regenerate Date + signature on every attempt (5-min skew rejection).
+      // Date and signature are regenerated per attempt, keeping both within
+      // Clear Junction's 5-minute skew window.
       const date = formatCjDate();
       const signature = buildSignature({
         apiKey: this.config.apiKey,
@@ -207,15 +208,14 @@ export class BaseClient {
       );
       lastError = typed;
 
-      // A 429 means the request was rejected before processing, so it is safe to
-      // repeat for any method. A 5xx may well have been processed server-side, so
-      // only repeat it when the call is idempotent — replaying a payout POST here
-      // would risk sending the same payment twice. This matches the conservative
-      // rule already applied to network/timeout failures above.
+      // 429 is rejected before processing, so it is safe to repeat for any
+      // method. A 5xx may have been processed server-side, so it is repeated
+      // only for idempotent calls — matching the rule applied to network and
+      // timeout failures above.
       const shouldRetry =
         attempt < maxRetries &&
         (response.status === 429 || (response.status >= 500 && idempotent));
-      // Never retry a non-GET on a 4xx; 429 is the sole retryable 4xx.
+      // 429 is the only retryable 4xx.
       const isNonRetryable4xx =
         response.status !== 429 && response.status >= 400 && response.status < 500;
       if (isNonRetryable4xx) throw typed;

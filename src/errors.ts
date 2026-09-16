@@ -98,8 +98,8 @@ function parseRetryAfter(header: string | null): number | undefined {
 }
 
 /**
- * Map an HTTP status + raw body to the typed error hierarchy.
- * JSON parsing is defensive: the sandbox edge returns HTML on 403.
+ * Map an HTTP status and raw body to the typed error hierarchy. Bodies are
+ * parsed as JSON when possible and passed through as text otherwise.
  */
 export function errorFromResponse(
   status: number,
@@ -134,10 +134,9 @@ export function errorFromResponse(
   if (status === 403) {
     const message = isJson
       ? `Forbidden (403)${suffix}`
-      : 'Forbidden (403). The Clear Junction sandbox IP-allowlists at its AWS load ' +
-        'balancer: an egress IP that has not been allowlisted returns a plain nginx/ELB 403 ' +
-        'for every path, including unauthenticated ones. This looks like an auth failure but ' +
-        'is not — have Clear Junction support allowlist the caller egress IP.';
+      : 'Forbidden (403) with a non-JSON body, which the Clear Junction sandbox returns ' +
+        'at its load balancer for every path when the caller egress IP is not on the ' +
+        'allowlist. Contact Clear Junction support to allowlist the egress IP.';
     return new ForbiddenError(message, {
       status,
       errors,

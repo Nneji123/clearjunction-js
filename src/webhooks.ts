@@ -20,9 +20,8 @@ import type { ProcessingMessage } from './types/entities.js';
 
 /* ---------------------------------------------------------------------------
  * Signature verification. Inbound notifications carry the same Authorization
- * scheme as requests, computed over the RAW body bytes. Verify every time;
- * never fail open when unconfigured. CJ's terms put the financial loss for an
- * unverified (or duplicate-as-unique) notification on the client.
+ * scheme as outbound requests, computed over the raw body bytes. Verification
+ * requires a full set of credentials and returns false without them.
  * ------------------------------------------------------------------------- */
 
 /** Credentials needed to verify one inbound notification. */
@@ -37,9 +36,8 @@ export interface WebhookCredentials {
 
 /**
  * Verify an inbound notification's `Authorization` header against the raw body.
- * Returns true only on an exact signature match; false otherwise (including
- * missing/empty inputs). Compare over the raw bytes as received — do not
- * re-serialise a parsed object.
+ * Returns true on an exact signature match, and false otherwise, including when
+ * any input is missing. Takes the raw bytes as received.
  */
 export function verifyWebhookSignature(
   rawBody: string,
@@ -66,8 +64,8 @@ export function verifyWebhookSignature(
 /* ---------------------------------------------------------------------------
  * Handler contract helpers. Every notification group shares the same rules:
  * reply HTTP 200, Content-Type text/plain, body = the bare orderReference,
- * within 10 seconds. A miss means 30 minutes of silence, then retries with
- * backoff for 7 days / 50 attempts.
+ * within 10 seconds. Unacknowledged notifications are retried with backoff for
+ * 7 days or 50 attempts.
  * ------------------------------------------------------------------------- */
 
 /** HTTP acknowledgement for a received notification. */
@@ -91,7 +89,7 @@ export function acknowledgeNotification(orderReference: string): WebhookAcknowle
 
 /**
  * Dedupe key for a notification: orderReference + status (+ operTimestamp for
- * refunds). Never process a duplicate as unique.
+ * refunds), matching Clear Junction's delivery deduplication.
  */
 export function notificationDedupeKey(input: {
   orderReference: string;
