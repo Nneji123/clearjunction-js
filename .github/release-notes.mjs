@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 /**
- * Builds the release version and notes for a production deploy.
+ * Builds the release version and notes for a package release.
  *
- * Deterministic by design: everything comes from git — commit subjects, bodies,
- * PR numbers and added migration files. Nothing is inferred or invented, so a
- * release can always be traced back to the commits it describes.
+ * Deterministic by design: everything comes from git — commit subjects, bodies
+ * and PR numbers. Nothing is inferred or invented, so a release can always be
+ * traced back to the commits it describes.
  *
- * Kept byte-identical across repos so it can later move to one shared workflow;
- * per-repo differences go in the workflow env, not here. Lives at .github/ and
- * not .github/scripts/ because errandigo-backend's .gitignore has an unanchored
- * `scripts/` rule that silently excluded it from the repo.
+ * The version is a semver bump off the highest existing v-tag, chosen by the
+ * conventional-commit types in the range: a breaking change bumps major, a feat
+ * bumps minor, anything else bumps patch.
  *
  * Local dry run (prints, writes nothing):
  *   node .github/release-notes.mjs --dry-run
@@ -18,7 +17,7 @@
  * In CI it appends `version` / `tag` / `notes_file` to $GITHUB_OUTPUT.
  */
 import { execFileSync } from "node:child_process";
-import { appendFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 
 /** Commits to look back over when no previous tag exists yet. */
 const BASELINE_COMMITS = 20;
@@ -97,34 +96,18 @@ function nextVersion(prev, commits) {
   return `${major}.${minor}.${patch + 1}`;
 }
 
-/**
- * Migrations added in this range. Deploys do NOT run these — they are applied by
- * hand — so the note flags them as outstanding rather than claiming they ran.
- *
- * Driven by MIGRATION_PATH / MIGRATION_CMD so this script stays identical across
- * repos; a repo with no versioned migrations simply leaves them unset.
- */
-const MIGRATION_PATH = process.env.MIGRATION_PATH ?? "";
-const MIGRATION_CMD = process.env.MIGRATION_CMD ?? "";
-
-function addedMigrations(range) {
-  if (!MIGRATION_PATH) return [];
-  const out = git("diff", "--name-only", "--diff-filter=A", range, "--", MIGRATION_PATH);
-  return out
-    ? out
-        .split("\n")
-        .filter(Boolean)
-        .map((f) => f.split("/").pop())
-    : [];
-}
-
 const prev = previousTag();
-const range = prev ? `${prev}..HEAD` : `HEAD~${BASELINE_COMMITS}..HEAD`;
+// HEAD~N does not resolve in a repo with fewer than N commits, so fall back to
+// the whole history rather than failing the first release.
+const total = Number(git("rev-list", "--count", "HEAD"));
+const baseline = total > BASELINE_COMMITS ? `HEAD~${BASELINE_COMMITS}..HEAD` : "HEAD";
+const range = prev ? `${prev}..HEAD` : baseline;
 const commits = parseCommits(range);
 const version = nextVersion(prev, commits);
 const tag = `v${version}`;
 const sha = git("rev-parse", "--short", "HEAD");
 const repo = process.env.GITHUB_REPOSITORY ?? "";
+const pkgName = JSON.parse(readFileSync("package.json", "utf8")).name;
 const prLink = (pr) => (repo ? `[#${pr}](https://github.com/${repo}/pull/${pr})` : `#${pr}`);
 // Linked so a line in the changelog goes straight to its diff. Falls back to
 // plain code when GITHUB_REPOSITORY is absent, i.e. a local --dry-run.
@@ -173,8 +156,7 @@ if (hidden.length > 0) {
   );
 }
 
-const migrations = addedMigrations(range);
-lines.push("## Deployment", "");
+lines.push("## Release", "");
 lines.push(`- Commit: ${shaLink(sha)}`);
 lines.push(
   `- Previous release: ${prev && repo ? `[${prev}](https://github.com/${repo}/releases/tag/${prev})` : (prev ?? "none")}`,
@@ -183,19 +165,7 @@ if (prev && repo) {
   lines.push(`- Full diff: https://github.com/${repo}/compare/${prev}...${tag}`);
 }
 lines.push(`- Commits in this release: ${commits.length}`);
-if (migrations.length > 0) {
-  lines.push(
-    `- ⚠️ **${migrations.length} new migration(s) in this release — NOT run by the deploy.**`,
-  );
-  if (MIGRATION_CMD) {
-    lines.push(`  Apply with \`${MIGRATION_CMD}\` from the \`prod\` branch:`);
-  }
-  for (const m of migrations) lines.push(`  - \`${m}\``);
-} else if (MIGRATION_PATH) {
-  // Only claim "none" where migrations are actually tracked; a repo without them
-  // should say nothing rather than imply it has a migration story.
-  lines.push("- New migrations: none");
-}
+lines.push(`- Install: \`npm install ${pkgName}@${version}\``);
 
 const notes = lines.join("\n");
 
