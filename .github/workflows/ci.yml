@@ -29,8 +29,12 @@ jobs:
       - name: Build
         run: npx tsup
 
+      # `npm publish --dry-run` exits 1 once the version exists on the registry
+      # ("cannot publish over the previously published versions"), which would
+      # fail CI on every run after a release. `npm pack` verifies the same
+      # tarball contents without consulting the registry.
       - name: Verify the published tarball
-        run: npm publish --dry-run
+        run: npm pack --dry-run
 
       - name: Smoke test the built package (ESM + CJS)
         run: |
