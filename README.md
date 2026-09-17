@@ -1,9 +1,5 @@
 # clearjunction-js
 
-[![CI](https://github.com/Nneji123/clearjunction-js/actions/workflows/ci.yml/badge.svg)](https://github.com/Nneji123/clearjunction-js/actions/workflows/ci.yml)
-[![Tests](https://github.com/Nneji123/clearjunction-js/actions/workflows/tests.yml/badge.svg)](https://github.com/Nneji123/clearjunction-js/actions/workflows/tests.yml)
-[![Codecov](https://github.com/Nneji123/clearjunction-js/actions/workflows/codecov.yml/badge.svg)](https://github.com/Nneji123/clearjunction-js/actions/workflows/codecov.yml)
-[![codecov](https://codecov.io/gh/Nneji123/clearjunction-js/branch/main/graph/badge.svg)](https://codecov.io/gh/Nneji123/clearjunction-js)
 [![npm version](https://img.shields.io/npm/v/clearjunction-js.svg)](https://www.npmjs.com/package/clearjunction-js)
 [![node](https://img.shields.io/node/v/clearjunction-js.svg)](https://www.npmjs.com/package/clearjunction-js)
 [![license](https://img.shields.io/npm/l/clearjunction-js.svg)](./LICENSE)
